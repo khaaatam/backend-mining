@@ -20,8 +20,15 @@ class DatabaseSeeder extends Seeder
             'email' => 'admin@mining.test',
             'password' => bcrypt('password'),
         ]);
-
         // assign role admin
         $admin->assignRole('Admin');
+
+        // akun dummy buat operator
+        $operator = User::factory()->create([
+            'name' => 'Operator Lapangan',
+            'email' => 'operator@mining.test',
+            'password' => bcrypt('password'),
+        ]);
+        $operator->assignRole('Operator');
     }
 }
