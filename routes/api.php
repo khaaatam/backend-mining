@@ -18,5 +18,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('users', UserController::class);
     });
 
-    // Nanti kalau ada fitur Operator/Viewer, taruh di bawah sini
+    // Vehicle Management Routes
+    Route::get('/vehicle-types', [\App\Http\Controllers\Api\VehicleTypeController::class, 'index']);
+    Route::apiResource('/vehicles', \App\Http\Controllers\Api\VehicleController::class);
+    Route::patch('/vehicles/{vehicle}/status', [\App\Http\Controllers\Api\VehicleController::class, 'updateStatus']);
 });
