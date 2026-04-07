@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Vehicle;
+use App\Http\Requests\VehicleRequest;
+use App\Http\Resources\VehicleResource;
 use Illuminate\Http\Request;
 use Spatie\QueryBuilder\QueryBuilder;
 use Spatie\QueryBuilder\AllowedFilter;
@@ -16,83 +18,70 @@ class VehicleController extends Controller
             ->allowedFilters([
                 AllowedFilter::exact('status'),
                 AllowedFilter::exact('vehicle_type_id'),
-                'asset_number',
-                'plate_number'
+                AllowedFilter::exact('site_id'),
+                AllowedFilter::exact('gps_provider_id'),
+                'asset_number'
             ])
-            ->allowedSorts(['asset_number', 'operating_hours', 'created_at'])
-            ->allowedIncludes(['vehicleType', 'currentOperator'])
+            ->allowedSorts([
+                'asset_number',
+                'operating_hours',
+                'created_at'
+            ])
+            ->allowedIncludes([
+                'vehicleType',
+                'currentOperator',
+                'gpsProvider'
+            ])
             ->defaultSort('-created_at')
             ->paginate(request()->get('per_page', 15));
 
-        return response()->json([
-            'status' => 'success',
-            'data' => $vehicles
-        ]);
+        return VehicleResource::collection($vehicles);
     }
 
-    public function store(Request $request)
+    public function store(VehicleRequest $request)
     {
-        $validated = $request->validate([
-            'asset_number' => 'required|string|unique:vehicles,asset_number',
-            'make' => 'required|string',
-            'model' => 'required|string',
-            'vehicle_type_id' => 'required|exists:vehicle_types,id',
-            'status' => 'required|in:active,idle,maintenance,breakdown,decommissioned',
-            'ownership_type' => 'required|in:owned,leased,rented',
-        ]);
-
-        $vehicle = Vehicle::create($validated);
+        $vehicle = Vehicle::create($request->validated());
 
         return response()->json([
             'status' => 'success',
             'message' => 'Kendaraan berhasil ditambahkan.',
-            'data' => $vehicle
+            'data' => new VehicleResource($vehicle)
         ], 201);
     }
 
     public function show($id)
     {
-        $vehicle = Vehicle::with(['vehicleType', 'currentOperator'])->findOrFail($id);
+        $vehicle = QueryBuilder::for(Vehicle::class)
+            ->allowedIncludes(['vehicleType', 'currentOperator', 'gpsProvider'])
+            ->findOrFail($id);
 
         return response()->json([
             'status' => 'success',
-            'data' => $vehicle
+            'data' => new VehicleResource($vehicle)
         ]);
     }
 
-    public function update(Request $request, $id)
+    public function update(VehicleRequest $request, $id)
     {
         $vehicle = Vehicle::findOrFail($id);
-
-        $validated = $request->validate([
-            'asset_number' => 'required|string|unique:vehicles,asset_number,' . $id,
-            'make' => 'required|string',
-            'model' => 'required|string',
-            'status' => 'required|in:active,idle,maintenance,breakdown,decommissioned',
-        ]);
-
-        $vehicle->update($validated);
+        $vehicle->update($request->validated());
 
         return response()->json([
             'status' => 'success',
             'message' => 'Data kendaraan berhasil diperbarui.',
-            'data' => $vehicle
+            'data' => new VehicleResource($vehicle)
         ]);
     }
 
-    public function updateStatus(Request $request, $id)
+    public function updateStatus(VehicleRequest $request, $id)
     {
-        $request->validate([
-            'status' => 'required|in:active,idle,maintenance,breakdown,decommissioned'
-        ]);
-
         $vehicle = Vehicle::findOrFail($id);
         $vehicle->update(['status' => $request->status]);
 
         return response()->json([
             'status' => 'success',
             'message' => 'Status kendaraan berhasil diubah menjadi ' . $request->status,
-            'data' => $vehicle
+            'data' => new VehicleResource($vehicle)
         ]);
     }
 
