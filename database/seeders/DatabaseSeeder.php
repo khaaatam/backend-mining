@@ -30,5 +30,11 @@ class DatabaseSeeder extends Seeder
             'password' => bcrypt('password'),
         ]);
         $operator->assignRole('Operator');
+
+        $this->call([
+            VehicleTypeSeeder::class,
+        ]);
+
+        \App\Models\Vehicle::factory(20)->create();
     }
 }
