@@ -6,44 +6,45 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\Api\VehicleTypeController;
 use App\Http\Controllers\Api\VehicleController;
 
-// Import controller lain (di-comment sementara jika file belum dibuat)
-// use App\Http\Controllers\GpsProviderController;
-// use App\Http\Controllers\MapController;
-// use App\Http\Controllers\OverlayController;
-// use App\Http\Controllers\DashboardController;
-
-// Authentication routes
 Route::post('/login', [AuthController::class, 'login']);
 
 Route::middleware('auth:sanctum')->group(function () {
 
-    // Profile and session management
+    // Profil & Auth
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/profile/update', [AuthController::class, 'updateProfile']);
 
-    // Admin exclusive routes
+    // ==========================================
+    // 1. KHUSUS ADMIN
+    // ==========================================
     Route::middleware('role:admin')->group(function () {
         Route::apiResource('users', UserController::class);
+        // Hapus kendaraan cuma boleh admin
         Route::delete('vehicles/{vehicle}', [VehicleController::class, 'destroy']);
-
-        // Route::apiResource('gps-providers', GpsProviderController::class)->except(['index', 'show']);
     });
 
-    // Admin and Operator routes
+    // ==========================================
+    // 2. ADMIN & OPERATOR
+    // ==========================================
     Route::middleware('role:admin|operator')->group(function () {
-        Route::apiResource('vehicles', VehicleController::class)->except(['index', 'destroy']);
-        Route::patch('/vehicles/{vehicle}/status', [VehicleController::class, 'updateStatus'])
-            ->name('vehicles.status');
-
-        // Route::post('overlays', [OverlayController::class, 'store']);
+        // Create, Update, dan ganti status
+        Route::post('vehicles', [VehicleController::class, 'store']);
+        Route::put('vehicles/{vehicle}', [VehicleController::class, 'update']);
+        Route::patch('vehicles/{vehicle}/status', [VehicleController::class, 'updateStatus'])->name('vehicles.status');
     });
 
-    // General authenticated access (Admin, Operator, Viewer)
-    Route::get('/vehicle-types', [VehicleTypeController::class, 'index']);
-    Route::get('/vehicles', [VehicleController::class, 'index']);
+    // ==========================================
+    // 3. AKSES UMUM (ADMIN, OPERATOR, VIEWER)
+    // ==========================================
+    Route::get('vehicle-types', [VehicleTypeController::class, 'index']);
 
-    // Route::get('map/live', [MapController::class, 'live']);
-    // Route::get('map/history', [MapController::class, 'history']);
-    // Route::get('overlays', [OverlayController::class, 'index']);
-    // Route::get('dashboard', [DashboardController::class, 'index']);
+    // Semua role bisa liat list kendaraan
+    Route::get('vehicles', [VehicleController::class, 'index']);
+
+    // FIX VIEWER: Semua role bisa liat detail kendaraan
+    Route::get('vehicles/{vehicle}', [VehicleController::class, 'show']);
+
+    // Endpoint untuk ngambil log aktivitas kendaraan
+    // (Biar API-nya gak error 404 pas masuk halaman detail)
+    Route::get('vehicles/{vehicle}/activities', [VehicleController::class, 'activities']);
 });

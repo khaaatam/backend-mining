@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Vehicle;
 use App\Http\Requests\VehicleRequest;
 use App\Http\Resources\VehicleResource;
-use Illuminate\Http\Request;
 use Spatie\QueryBuilder\QueryBuilder;
 use Spatie\QueryBuilder\AllowedFilter;
 

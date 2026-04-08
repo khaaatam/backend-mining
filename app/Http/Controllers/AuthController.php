@@ -3,9 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use App\Models\User;
 
 class AuthController extends Controller
 {
@@ -13,22 +11,27 @@ class AuthController extends Controller
     {
         $request->validate([
             'email' => 'required|email',
-            'password' => 'required'
+            'password' => 'required',
         ]);
 
-        if (!Auth::attempt($request->only('email', 'password'))) {
-            return $this->errorResponse('email atau password salah', 401);
+        $user = \App\Models\User::where('email', $request->email)->first();
+
+        if (!$user || !\Illuminate\Support\Facades\Hash::check($request->password, $user->password)) {
+            return response()->json([
+                'message' => 'kredensial tidak valid'
+            ], 401);
         }
 
-        $user = User::where('email', $request->email)->firstOrFail();
+        // Muat relasi roles agar terbaca oleh frontend Vue Pinia
+        $user->load('roles');
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
-        return $this->successResponse([
-            'user' => $user,
-            'token' => $token,
-            'role' => $user->getRoleNames()->first()
-        ], 'login berhasil');
+        return response()->json([
+            'message' => 'login berhasil',
+            'access_token' => $token,
+            'user' => $user
+        ]);
     }
 
     public function updateProfile(Request $request)
