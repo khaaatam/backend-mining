@@ -3,9 +3,6 @@
 namespace App\Providers;
 
 use App\Gps\GpsProviderManager;
-use App\Jobs\GpsIngestionJob;
-use App\Models\Vehicle;
-use Illuminate\Support\Facades\Schedule;
 use Illuminate\Support\ServiceProvider;
 
 class GpsServiceProvider extends ServiceProvider
@@ -29,14 +26,15 @@ class GpsServiceProvider extends ServiceProvider
         // Each vehicle gets its own job dispatched to the 'gps' queue.
         // The scheduler runs every minute; the poll_interval on each provider
         // is respected inside the job (skip if last ping is recent enough).
-        Schedule::call(function () {
-            Vehicle::query()
+        \Illuminate\Support\Facades\Schedule::call(function () {
+            \App\Models\Vehicle::query()
                 ->whereNotNull('gps_device_id')
                 ->whereNotNull('gps_provider_id')
                 ->whereHas('gpsProvider', fn($q) => $q->where('is_active', true))
                 ->pluck('id')
                 ->each(function (int $vehicleId) {
-                    GpsIngestionJob::dispatch($vehicleId)->onQueue('gps');
+                    // Dispatch job ke antrean khusus 'gps'
+                    \App\Jobs\GpsIngestionJob::dispatch($vehicleId)->onQueue('gps');
                 });
         })->everyMinute()->name('gps-ingestion')->withoutOverlapping();
     }
