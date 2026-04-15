@@ -45,7 +45,7 @@ class VehicleController extends Controller
             'gps_provider_id' => 'required|exists:gps_providers,id',
             'gps_device_id' => 'required|string|max:255|unique:vehicles,gps_device_id,' . $vehicle->id,
         ], [
-            'gps_device_id.unique' => 'IMEI ini sudah digunakan oleh kendaraan lain blay!'
+            'gps_device_id.unique' => 'ID Perangkat / IMEI ini sudah terdaftar pada kendaraan lain.'
         ]);
 
         $vehicle->update($validated);
