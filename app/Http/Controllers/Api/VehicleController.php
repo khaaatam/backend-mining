@@ -16,6 +16,7 @@ class VehicleController extends Controller
     public function index()
     {
         $vehicles = QueryBuilder::for(Vehicle::class)
+            ->with(['vehicleType', 'currentOperator', 'gpsProvider'])
             ->allowedFilters([
                 AllowedFilter::exact('status'),
                 AllowedFilter::exact('vehicle_type_id'),
@@ -23,16 +24,7 @@ class VehicleController extends Controller
                 AllowedFilter::exact('gps_provider_id'),
                 'asset_number'
             ])
-            ->allowedSorts([
-                'asset_number',
-                'operating_hours',
-                'created_at'
-            ])
-            ->allowedIncludes([
-                'vehicleType',
-                'currentOperator',
-                'gpsProvider'
-            ])
+            ->allowedSorts(['asset_number', 'operating_hours', 'created_at'])
             ->defaultSort('-created_at')
             ->paginate(request()->get('per_page', 15));
 
@@ -70,12 +62,28 @@ class VehicleController extends Controller
     public function show($id)
     {
         $vehicle = QueryBuilder::for(Vehicle::class)
-            ->allowedIncludes(['vehicleType', 'currentOperator', 'gpsProvider'])
+            ->allowedIncludes(['vehicleType', 'currentOperator', 'gpsProvider', 'activities'])
             ->findOrFail($id);
 
         return response()->json([
             'status' => 'success',
             'data' => new VehicleResource($vehicle)
+        ]);
+    }
+
+    public function activities($id)
+    {
+        $vehicle = Vehicle::findOrFail($id);
+
+        // Ambil log aktivitas dari Spatie
+        $activities = $vehicle->activities()
+            ->with('causer')
+            ->latest()
+            ->paginate(10);
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $activities
         ]);
     }
 

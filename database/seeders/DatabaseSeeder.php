@@ -20,7 +20,6 @@ class DatabaseSeeder extends Seeder
             'email' => 'admin@mining.test',
             'password' => bcrypt('password'),
         ]);
-        // assign role admin
         $admin->assignRole('Admin');
 
         // akun dummy buat operator
@@ -33,8 +32,10 @@ class DatabaseSeeder extends Seeder
 
         $this->call([
             VehicleTypeSeeder::class,
+            GpsProviderSeeder::class,
         ]);
 
+        // Baru generate kendaraannya
         \App\Models\Vehicle::factory(20)->create();
     }
 }
