@@ -11,10 +11,7 @@ class GpsProviderApiController extends Controller
     // Ambil semua daftar provider buat ditampilin di tabel Vue
     public function index()
     {
-        return response()->json(GpsProvider::all());
-
         $providers = \App\Models\GpsProvider::withCount('vehicles')->get();
-
         return response()->json($providers);
     }
 
