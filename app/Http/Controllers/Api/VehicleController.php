@@ -43,17 +43,16 @@ class VehicleController extends Controller
     {
         $validated = $request->validate([
             'gps_provider_id' => 'required|exists:gps_providers,id',
-            'gps_device_id' => 'required|string|max:255',
+            'gps_device_id' => 'required|string|max:255|unique:vehicles,gps_device_id,' . $vehicle->id,
+        ], [
+            'gps_device_id.unique' => 'IMEI ini sudah digunakan oleh kendaraan lain blay!'
         ]);
 
-        $vehicle->update([
-            'gps_provider_id' => $validated['gps_provider_id'],
-            'gps_device_id' => $validated['gps_device_id']
-        ]);
+        $vehicle->update($validated);
 
         return response()->json([
             'message' => 'GPS berhasil dipasang ke kendaraan',
-            'data' => $vehicle
+            'data' => $vehicle->load('gpsProvider')
         ]);
     }
 
