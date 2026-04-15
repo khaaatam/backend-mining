@@ -8,6 +8,8 @@ use App\Http\Requests\VehicleRequest;
 use App\Http\Resources\VehicleResource;
 use Spatie\QueryBuilder\QueryBuilder;
 use Spatie\QueryBuilder\AllowedFilter;
+use Illuminate\Http\Request;
+
 
 class VehicleController extends Controller
 {
@@ -35,6 +37,24 @@ class VehicleController extends Controller
             ->paginate(request()->get('per_page', 15));
 
         return VehicleResource::collection($vehicles);
+    }
+
+    public function linkGps(Request $request, \App\Models\Vehicle $vehicle)
+    {
+        $validated = $request->validate([
+            'gps_provider_id' => 'required|exists:gps_providers,id',
+            'gps_device_id' => 'required|string|max:255',
+        ]);
+
+        $vehicle->update([
+            'gps_provider_id' => $validated['gps_provider_id'],
+            'gps_device_id' => $validated['gps_device_id']
+        ]);
+
+        return response()->json([
+            'message' => 'GPS berhasil dipasang ke kendaraan',
+            'data' => $vehicle
+        ]);
     }
 
     public function store(VehicleRequest $request)

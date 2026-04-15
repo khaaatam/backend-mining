@@ -63,8 +63,6 @@ class Vehicle extends Model
 
     public function gpsProvider()
     {
-        // Asumsi model GpsProvider akan ada, kita relasikan berdasarkan id
-        // Jika belum ada modelnya, relasi ini tetap aman dideklarasikan
-        return $this->belongsTo(\App\Models\User::class, 'gps_provider_id'); // Fallback sementara ke tabel yang ada atau biarkan seperti ini jika GpsProvider menyusul
+        return $this->belongsTo(GpsProvider::class, 'gps_provider_id');
     }
 }
