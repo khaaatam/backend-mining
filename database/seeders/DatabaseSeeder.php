@@ -20,7 +20,7 @@ class DatabaseSeeder extends Seeder
             'email' => 'admin@mining.test',
             'password' => bcrypt('password'),
         ]);
-        $admin->assignRole('Admin');
+        $admin->assignRole('admin');
 
         // akun dummy buat operator
         $operator = User::factory()->create([
@@ -28,7 +28,7 @@ class DatabaseSeeder extends Seeder
             'email' => 'operator@mining.test',
             'password' => bcrypt('password'),
         ]);
-        $operator->assignRole('Operator');
+        $operator->assignRole('operator');
 
         $this->call([
             VehicleTypeSeeder::class,

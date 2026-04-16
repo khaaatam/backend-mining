@@ -10,8 +10,8 @@ class RoleSeeder extends Seeder
     public function run(): void
     {
         // bikin 3 role sesuai spesifikasi dokumen
-        Role::create(['name' => 'Admin']);
-        Role::create(['name' => 'Operator']);
-        Role::create(['name' => 'Viewer']);
+        Role::create(['name' => 'admin']);
+        Role::create(['name' => 'operator']);
+        Role::create(['name' => 'viewer']);
     }
 }
