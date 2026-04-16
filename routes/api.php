@@ -40,6 +40,8 @@ Route::middleware('auth:sanctum')->group(function () {
         // Link vehicle GPS device ID & provider
         // Sesuai subtask: "Link vehicle GPS device ID"
         Route::patch('vehicles/{vehicle}/gps-link', [VehicleController::class, 'linkGps']);
+        Route::get('gps-providers', [GpsProviderApiController::class, 'index']);
+        Route::get('gps-providers/{id}', [GpsProviderApiController::class, 'show']);
     });
 
     // ==========================================
