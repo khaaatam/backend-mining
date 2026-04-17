@@ -9,6 +9,7 @@ use App\Http\Resources\VehicleResource;
 use Spatie\QueryBuilder\QueryBuilder;
 use Spatie\QueryBuilder\AllowedFilter;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 
 
 class VehicleController extends Controller
@@ -109,6 +110,118 @@ class VehicleController extends Controller
             'message' => 'Status kendaraan berhasil diubah menjadi ' . $request->status,
             'data' => new VehicleResource($vehicle)
         ]);
+    }
+
+    public function tracking(\App\Models\Vehicle $vehicle)
+    {
+        if (!$vehicle->gps_device_id) {
+            return response()->json([
+                'result' => -1,
+                'status' => [],
+                'error' => 'GPS device belum di-set'
+            ], 400);
+        }
+
+        try {
+            // ambil provider
+            $provider = $vehicle->gpsProvider;
+
+            if (!$provider) {
+                return response()->json([
+                    'result' => -1,
+                    'status' => [],
+                    'error' => 'Provider tidak ditemukan'
+                ], 400);
+            }
+
+            if (!$provider->is_active) {
+                return response()->json([
+                    'result' => -1,
+                    'status' => [],
+                    'error' => 'Provider tidak aktif'
+                ], 400);
+            }
+
+            // build URL
+            $baseUrl = rtrim($provider->base_url, '/');
+            $endpoint = ltrim($provider->location_endpoint ?? '/device-status', '/');
+            $url = $baseUrl . '/' . $endpoint;
+
+            // auth config
+            $authConfig = $provider->auth_config ?? [];
+            $headers = [];
+
+            if ($provider->auth_type === 'bearer') {
+                $headers['Authorization'] = 'Bearer ' . ($authConfig['key'] ?? '');
+            } elseif ($provider->auth_type === 'api_key') {
+                $headers[$authConfig['header'] ?? 'X-API-KEY'] = $authConfig['key'] ?? '';
+            }
+
+            // request ke provider
+            $response = Http::withHeaders($headers)
+                ->get($url, [
+                    'devices' => $vehicle->gps_device_id
+                ]);
+
+            // 🔥 DEBUG RESPONSE (sementara)
+            if (!$response->successful()) {
+                return response()->json([
+                    'result' => -1,
+                    'status' => [],
+                    'error' => 'Request ke provider gagal',
+                    'debug' => [
+                        'url' => $url,
+                        'headers' => $headers,
+                        'response' => $response->body()
+                    ]
+                ], 500);
+            }
+
+            $data = $response->json();
+
+            // parsing
+            $deviceData = $data['results'][0]['data'] ?? null;
+
+            if (!$deviceData || $deviceData['result'] !== 0) {
+                return response()->json([
+                    'result' => -1,
+                    'status' => [],
+                    'error' => 'Data GPS tidak valid',
+                    'debug' => $data
+                ], 404);
+            }
+
+            $status = $deviceData['status'][0] ?? null;
+
+            if (!$status) {
+                return response()->json([
+                    'result' => -1,
+                    'status' => [],
+                    'error' => 'Status kosong',
+                    'debug' => $deviceData
+                ], 404);
+            }
+
+            // ✅ FINAL OUTPUT SESUAI PDF
+            return response()->json([
+                'result' => $deviceData['result'],
+                'status' => [
+                    [
+                        'mlat' => $status['mlat'] ?? null,
+                        'mlng' => $status['mlng'] ?? null,
+                        'sp'   => $status['sp'] ?? 0,
+                        'hx'   => $status['hx'] ?? null,
+                        'gt'   => $status['gt'] ?? null,
+                    ]
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'result' => -1,
+                'status' => [],
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function destroy($id)

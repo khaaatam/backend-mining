@@ -11,47 +11,32 @@ Route::post('/login', [AuthController::class, 'login']);
 
 Route::middleware('auth:sanctum')->group(function () {
 
-    // Profil & Auth
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/profile/update', [AuthController::class, 'updateProfile']);
 
-    // ==========================================
-    // 1. KHUSUS ADMIN
-    // ==========================================
+    // Admin Only
     Route::middleware('role:admin')->group(function () {
         Route::apiResource('users', UserController::class);
-
-        // CRUD GPS Provider (Hexagon, dll)
         Route::apiResource('gps-providers', GpsProviderApiController::class);
-
-        // Hapus kendaraan cuma boleh admin
+        Route::get('vehicles/{vehicle}/tracking', [VehicleController::class, 'tracking']);
         Route::delete('vehicles/{vehicle}', [VehicleController::class, 'destroy']);
     });
 
-    // ==========================================
-    // 2. ADMIN & OPERATOR
-    // ==========================================
+    // Admin & Operator
     Route::middleware('role:admin|operator')->group(function () {
-        // Create, Update, dan ganti status
         Route::post('vehicles', [VehicleController::class, 'store']);
         Route::put('vehicles/{vehicle}', [VehicleController::class, 'update']);
         Route::patch('vehicles/{vehicle}/status', [VehicleController::class, 'updateStatus'])->name('vehicles.status');
-
-        // Link vehicle GPS device ID & provider
-        // Sesuai subtask: "Link vehicle GPS device ID"
         Route::patch('vehicles/{vehicle}/gps-link', [VehicleController::class, 'linkGps']);
+
         Route::get('gps-providers', [GpsProviderApiController::class, 'index']);
         Route::get('gps-providers/{id}', [GpsProviderApiController::class, 'show']);
     });
 
-    // ==========================================
-    // 3. AKSES UMUM (ADMIN, OPERATOR, VIEWER)
-    // ==========================================
+    // Public Access (Admin, Operator, Viewer)
     Route::get('vehicle-types', [VehicleTypeController::class, 'index']);
     Route::get('vehicles', [VehicleController::class, 'index']);
     Route::get('vehicles/{vehicle}', [VehicleController::class, 'show']);
     Route::get('vehicles/{vehicle}/activities', [VehicleController::class, 'activities']);
-
-    // Dropdown list buat milih provider pas di UI assignment
     Route::get('gps-providers-list', [GpsProviderApiController::class, 'list']);
 });
