@@ -6,6 +6,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\Api\VehicleTypeController;
 use App\Http\Controllers\Api\VehicleController;
 use App\Http\Controllers\Api\GpsProviderApiController;
+use App\Http\Controllers\Api\MapController;
 
 Route::post('/login', [AuthController::class, 'login']);
 
@@ -39,4 +40,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('vehicles/{vehicle}', [VehicleController::class, 'show']);
     Route::get('vehicles/{vehicle}/activities', [VehicleController::class, 'activities']);
     Route::get('gps-providers-list', [GpsProviderApiController::class, 'list']);
+    Route::get('map/live', [MapController::class, 'live']);
 });

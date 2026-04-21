@@ -22,6 +22,7 @@ class Vehicle extends Model
         'stnk_expiry' => 'date',
         'kir_expiry' => 'date',
         'insurance_expiry' => 'date',
+        'operating_hours' => 'decimal:1',
     ];
 
     // Konfigurasi Activity Log otomatis
