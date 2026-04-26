@@ -11,24 +11,14 @@ class MapController extends Controller
 {
     public function live(): JsonResponse
     {
-        // Query kendaraan yang punya lokasi terakhir
-        // Kita join dengan vehicle_types untuk dapet icon_key buat marker di peta
-        $vehicles = Vehicle::query()
+        $vehicles = Vehicle::with('vehicleType')
             ->select([
-                'vehicles.id',
-                'vehicles.asset_number',
-                'vehicles.status',
-                'vehicles.last_seen_at',
-                'vehicles.operating_hours', // Tambahan info buat popup
-                'vehicle_types.icon_key as type_key',
-                // Ambil koordinat langsung sebagai GeoJSON geometry string
+                'vehicles.*', // <-- Ini udah otomatis narik 'make' dan 'model'
                 DB::raw('ST_AsGeoJSON(last_known_location) as geometry')
             ])
-            ->join('vehicle_types', 'vehicles.vehicle_type_id', '=', 'vehicle_types.id')
             ->whereNotNull('last_known_location')
             ->get();
 
-        // Mapping ke format FeatureCollection GeoJSON
         $features = $vehicles->map(function ($vehicle) {
             $lastSeen = $vehicle->last_seen_at ? $vehicle->last_seen_at : null;
 
@@ -39,9 +29,17 @@ class MapController extends Controller
                     'id' => $vehicle->id,
                     'asset_number' => $vehicle->asset_number,
                     'status' => $vehicle->status,
-                    'type_key' => $vehicle->type_key,
+                    'type_key' => $vehicle->vehicleType->icon_key ?? 'unknown',
+                    'type_name' => $vehicle->vehicleType->name ?? 'Unit',
+
+                    // === GANTI JADI MAKE ===
+                    'make' => $vehicle->make ?? 'Unknown',
+                    'model' => $vehicle->model ?? '',
+
+                    'speed' => $vehicle->speed ?? 0,
+                    'heading' => $vehicle->heading ?? 0,
+                    'operating_hours' => $vehicle->operating_hours ?? 0,
                     'last_seen_at' => $lastSeen ? $lastSeen->toIso8601String() : null,
-                    // Tambahkan is_stale jika data lebih dari 5 menit
                     'is_stale' => $lastSeen ? $lastSeen->diffInMinutes(now()) > 5 : true,
                 ],
             ];
