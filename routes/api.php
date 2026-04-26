@@ -41,4 +41,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('vehicles/{vehicle}/activities', [VehicleController::class, 'activities']);
     Route::get('gps-providers-list', [GpsProviderApiController::class, 'list']);
     Route::get('map/live', [MapController::class, 'live']);
+    Route::get('/map/live/{vehicle}', [MapController::class, 'singleLive']);
 });
