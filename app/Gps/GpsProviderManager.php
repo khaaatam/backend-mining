@@ -6,6 +6,7 @@ use App\Contracts\Gps\GpsProviderContract;
 use App\Gps\Providers\GenericRestProvider;
 use App\Gps\Providers\HexagonProvider;
 use App\Gps\Providers\TeltonikaProvider;
+use App\Gps\Providers\LenzguardProvider;
 use App\Models\GpsProvider;
 use InvalidArgumentException;
 
@@ -29,6 +30,7 @@ class GpsProviderManager
         $this->register('teltonika', TeltonikaProvider::class);
         $this->register('generic',   GenericRestProvider::class);
         $this->register('hexagon',   HexagonProvider::class);
+        $this->register('lenzguard', LenzguardProvider::class);
     }
 
     /**
