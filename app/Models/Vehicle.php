@@ -17,6 +17,8 @@ class Vehicle extends Model
 
     protected $casts = [
         'last_seen_at' => 'datetime',
+        'speed' => 'float',
+        'heading' => 'float',
         'last_service_date' => 'date',
         'next_service_date' => 'date',
         'stnk_expiry' => 'date',

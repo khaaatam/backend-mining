@@ -54,9 +54,12 @@ class GpsIngestionJob implements ShouldQueue
                 'longitude'   => $normalized->longitude,
             ]);
 
+            $vehicle->refresh();
             // Update vehicle's last known location + last_seen_at
             $vehicle->update([
                 'last_seen_at' => $normalized->recordedAt,
+                'speed'        => $normalized->speed,
+                'heading'      => $normalized->heading,
             ]);
 
             DB::statement("
