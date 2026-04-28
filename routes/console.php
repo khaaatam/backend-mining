@@ -9,3 +9,7 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote')->hourly();
 
 Schedule::command('gps:create-partition')->monthlyOn(1, '00:05');
+
+Schedule::command('veridapt:sync-locations')
+    ->everyThirtyMinutes()
+    ->withoutOverlapping();

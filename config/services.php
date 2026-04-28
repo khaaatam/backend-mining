@@ -31,4 +31,10 @@ return [
         ],
     ],
 
+    'veridapt' => [
+        'url' => env('VERIDAPT_URL'),
+        'api_key' => env('VERIDAPT_API_KEY'),
+        'site_id' => env('VERIDAPT_SITE_ID'),
+    ],
+
 ];
