@@ -5,7 +5,7 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use App\Services\VeridaptService;
 use App\Models\Vehicle;
-// use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\DB;
 
 class SyncVeridaptLocations extends Command
 {
@@ -21,33 +21,32 @@ class SyncVeridaptLocations extends Command
             return;
         }
 
-        // 1. Sync fuel stations — run daily or on demand
+        // 1. Sync fuel stations (T01)
         $this->info('Syncing fuel station coordinates...');
         $stations = $service->getFuelStationCoordinates($siteId);
         foreach ($stations as $station) {
-            Vehicle::where('veridapt_asset_id', $station['asset_id'])
+            // PAKE asset_number JANGAN equipment_id
+            Vehicle::where('asset_number', $station['code'])
                 ->update([
-                    'latitude'   => $station['latitude'],
-                    'longitude'  => $station['longitude'],
-                    'synced_at'  => now(),
+                    'last_known_location' => DB::raw("ST_GeomFromText('POINT({$station['longitude']} {$station['latitude']})', 4326)"),
+                    'last_seen_at' => now(),
                 ]);
         }
-        $this->info(count($stations) . ' fuel stations synced.');
 
-        // 2. Sync fuel truck last positions — run more frequently
-        $this->info('Syncing fuel truck positions via transactions...');
-        $updatedFrom = now()->subMinutes(30)->toIso8601String();
-        $transactions = $service->getLatestFuelTruckTransactions($siteId, $updatedFrom);
+        // 2. Sync fuel truck positions (FT-9911)
+        $this->info('Syncing fuel truck positions...');
+        // PAKE getFuelTruckLastPosition BIAR LANGSUNG UPDATE TANPA NUNGGU TRANSAKSI
+        $trucks = $service->getFuelTruckLastPosition($siteId);
 
-        foreach ($transactions as $tx) {
-            Vehicle::where('equipment_id', $tx['target_equipment'])
+        foreach ($trucks as $truck) {
+            // PAKE asset_number JANGAN equipment_id
+            Vehicle::where('asset_number', $truck['equipment_id'])
                 ->update([
-                    'latitude'        => $tx['latitude'],
-                    'longitude'       => $tx['longitude'],
-                    'last_seen_at'    => $tx['collected_at'],
-                    'synced_at'       => now(),
+                    'last_known_location' => DB::raw("ST_GeomFromText('POINT({$truck['longitude']} {$truck['latitude']})', 4326)"),
+                    'last_seen_at' => now(),
                 ]);
         }
-        $this->info(count($transactions) . ' fuel truck positions updated.');
+
+        $this->info(count($trucks) . ' fuel truck positions updated.');
     }
 }

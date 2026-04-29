@@ -57,6 +57,7 @@ class GpsIngestionJob implements ShouldQueue
             $vehicle->refresh();
             // Update vehicle's last known location + last_seen_at
             $vehicle->update([
+                'last_known_location' => DB::raw("ST_GeomFromText('POINT({$normalized->longitude} {$normalized->latitude})', 4326)"),
                 'last_seen_at' => $normalized->recordedAt,
                 'speed'        => $normalized->speed,
                 'heading'      => $normalized->heading,
