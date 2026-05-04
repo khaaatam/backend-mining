@@ -36,7 +36,7 @@ class SyncVeridaptLocations extends Command
         $stations = $service->getFuelStationCoordinates($siteId);
         foreach ($stations as $station) {
             Vehicle::where('asset_number', $station['code'])
-                ->where('gps_provider_id', $stationProvId) // Filter ke provider Station
+                ->where('gps_provider_id', $stationProvId) 
                 ->update([
                     'last_known_location' => DB::raw("ST_GeomFromText('POINT({$station['longitude']} {$station['latitude']})', 4326)"),
                     'last_seen_at' => now(),
