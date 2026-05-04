@@ -44,13 +44,17 @@ class SyncVeridaptLocations extends Command
         }
         $this->info(count($stations) . ' fuel stations synced.');
 
-        // 2. Sync fuel truck positions (FT-9911)
+        // 2. Sync fuel truck positions
         $this->info('Syncing fuel truck positions...');
         $trucks = $service->getFuelTruckLastPosition($siteId);
 
         foreach ($trucks as $truck) {
+            if (empty($truck['longitude']) || empty($truck['latitude'])) {
+                $this->warn("Truk {$truck['equipment_id']} di-ignore karena tidak ada data transaksi terbaru.");
+                continue;
+            }
             Vehicle::where('asset_number', $truck['equipment_id'])
-                ->where('gps_provider_id', $truckProvId) // Filter ke provider Truck
+                ->where('gps_provider_id', $truckProvId)
                 ->update([
                     'last_known_location' => DB::raw("ST_GeomFromText('POINT({$truck['longitude']} {$truck['latitude']})', 4326)"),
                     'last_seen_at' => now(),
