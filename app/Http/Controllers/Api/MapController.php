@@ -33,7 +33,7 @@ class MapController extends Controller
                     'type_name' => $vehicle->vehicleType->name ?? 'Unit',
                     'make' => $vehicle->make ?? 'Unknown',
                     'model' => $vehicle->model ?? '',
-
+                    'veridapt_tank_code' => $vehicle->veridapt_tank_code,
                     'speed' => $vehicle->speed ?? 0,
                     'heading' => $vehicle->heading ?? 0,
                     'operating_hours' => $vehicle->operating_hours ?? 0,

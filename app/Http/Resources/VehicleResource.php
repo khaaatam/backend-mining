@@ -30,6 +30,7 @@ class VehicleResource extends JsonResource
             'last_seen_at' => $this->last_seen_at?->toIso8601String(),
             'gps_provider_id' => $this->gps_provider_id,
             'gps_device_id' => $this->gps_device_id,
+            'veridapt_tank_code' => $this->veridapt_tank_code,
 
             // Relasi (Gunakan whenLoaded agar tidak error jika tidak di-include)
             'vehicle_type' => new VehicleTypeResource($this->whenLoaded('vehicleType')),
