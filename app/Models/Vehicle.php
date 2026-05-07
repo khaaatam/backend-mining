@@ -17,6 +17,7 @@ class Vehicle extends Model
 
     protected $casts = [
         'last_seen_at' => 'datetime',
+        'veridapt_tank_synced_at' => 'datetime',
         'speed' => 'float',
         'heading' => 'float',
         'last_service_date' => 'date',
