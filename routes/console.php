@@ -12,9 +12,7 @@ Artisan::command('inspire', function () {
 
 Schedule::command('gps:create-partition')->monthlyOn(1, '00:05');
 
-Schedule::command('veridapt:sync-locations')
-    ->everyThirtyMinutes()
-    ->withoutOverlapping();
+Schedule::command('veridapt:sync-locations')->hourly();
 
 Schedule::call(function () {
     $vehicles = Vehicle::whereNotNull('gps_provider_id')
