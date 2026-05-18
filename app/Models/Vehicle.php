@@ -56,7 +56,12 @@ class Vehicle extends Model
     // Relationships
     public function vehicleType()
     {
-        return $this->belongsTo(VehicleType::class);
+        return $this->belongsTo(VehicleType::class, 'vehicle_type_id');
+    }
+
+    public function type()
+    {
+        return $this->vehicleType();
     }
 
     public function currentOperator()

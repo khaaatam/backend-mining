@@ -3,16 +3,18 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Vehicle;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Http\JsonResponse;
 
 class LocationHistoryController extends Controller
 {
     /**
      * Get historical GPS path and statistics for a vehicle.
      */
-    public function index(Request $request)
+    public function index(Request $request): JsonResponse
     {
         // 1. Validasi Input
         $request->validate([
@@ -25,17 +27,11 @@ class LocationHistoryController extends Controller
         $from = Carbon::parse($request->from);
         $to = Carbon::parse($request->to);
 
-        // Maksimal penarikan 3 hari untuk menjaga performa server & memori browser
-        if ($from->diffInDays($to) > 3) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Rentang waktu maksimal yang diizinkan adalah 3 hari.'
-            ], 422);
-        }
+        // 2. Tarik Data Vehicle & Tipe Secara Manual (Anti-Relationship Error)
+        $vehicle = Vehicle::find($vehicleId);
+        $vType = DB::table('vehicle_types')->find($vehicle->vehicle_type_id);
 
-        // =====================================================================
-        // STEP 1: AMBIL STATISTIK & HITUNG JARAK VIA POSTGIS (ST_Length)
-        // =====================================================================
+        // 3. Ambil Statistik Perjalanan (recorded_at)
         $stats = DB::table('gps_pings')
             ->where('vehicle_id', $vehicleId)
             ->whereBetween('recorded_at', [$from, $to])
@@ -48,54 +44,34 @@ class LocationHistoryController extends Controller
             ')
             ->first();
 
-        // Kalau datanya kosong (truk nggak jalan di jam segitu), kembalikan Empty GeoJSON
-        if (!$stats || $stats->point_count == 0) {
+        // Kalau Zonk, kirim meta kosong tapi info kendaraan tetep ada
+        if (!$stats || $stats->point_count == 2) {
             return response()->json([
                 'type' => 'FeatureCollection',
                 'features' => [],
-                'meta' => [
-                    'distance_km' => 0,
-                    'duration_min' => 0,
-                    'avg_speed' => 0,
-                    'max_speed' => 0,
-                    'point_count' => 0
-                ]
+                'meta' => $this->buildMeta($stats, 0, 0, $vehicle, $vType)
             ]);
         }
 
-        // Hitung Total Jarak (Distance) pakai fungsi Spasial PostGIS
+        // 4. Hitung Jarak pake PostGIS (kolom: coordinates)
         $distanceQuery = DB::table('gps_pings')
             ->where('vehicle_id', $vehicleId)
             ->whereBetween('recorded_at', [$from, $to])
-            ->selectRaw('ST_Length(ST_MakeLine(ST_SetSRID(ST_MakePoint(longitude, latitude), 4326) ORDER BY recorded_at)::geography) / 1000 as distance_km')
+            ->selectRaw('ST_Length(ST_MakeLine(coordinates::geometry ORDER BY recorded_at)::geography) / 1000 as distance_km')
             ->first();
 
-        $distanceKm = $distanceQuery ? (float) $distanceQuery->distance_km : 0;
+        $distanceKm = $distanceQuery ? (float) $distanceQuery->distance_km : 0; 
         $durationMin = Carbon::parse($stats->start_time)->diffInMinutes(Carbon::parse($stats->end_time));
 
-        // =====================================================================
-        // STEP 2: TARIK KOORDINAT & DOWNSAMPLING
-        // =====================================================================
-        $query = DB::table('gps_pings')
+        // 5. Tarik Pings buat Gambar Rute
+        $pings = DB::table('gps_pings')
             ->where('vehicle_id', $vehicleId)
             ->whereBetween('recorded_at', [$from, $to])
             ->orderBy('recorded_at', 'asc')
-            ->select('latitude', 'longitude', 'speed', 'recorded_at');
+            ->select('latitude', 'longitude', 'speed')
+            ->get();
 
-        $pings = $query->get();
-
-        // Downsampling (Mirip RDP): Kalau titik > 2000, kita lompat-lompat nariknya
-        // Biar ukuran JSON yang dikirim nggak bikin browser meledak.
-        $pointCount = $pings->count();
-        if ($pointCount > 2000) {
-            $step = ceil($pointCount / 1000);
-            $pings = $pings->nth($step); // Ambil setiap baris ke-N
-        }
-
-        // =====================================================================
-        // STEP 3: GEOJSON SPEED SEGMENTING
-        // Memecah 1 rute panjang jadi segmen-segmen warna berdasarkan kecepatan
-        // =====================================================================
+        // 6. Segmentasi Warna Kecepatan (4 Tier)
         $features = [];
         $currentSegment = [];
         $currentTier = null;
@@ -103,59 +79,62 @@ class LocationHistoryController extends Controller
         foreach ($pings as $ping) {
             $speed = (float) $ping->speed;
 
-            // Kategori warna sesuai dokumen Asana
-            if ($speed < 20) {
-                $tier = 'tier1';
-            } elseif ($speed < 35) {
-                $tier = 'tier2';
-            } elseif ($speed < 50) {
-                $tier = 'tier3';
-            } else {
-                $tier = 'tier4';
-            }
+            if ($speed < 20) $tier = 'tier1';
+            elseif ($speed < 35) $tier = 'tier2';
+            elseif ($speed < 50) $tier = 'tier3';
+            else $tier = 'tier4';
 
             $coord = [(float)$ping->longitude, (float)$ping->latitude];
 
             if ($currentTier !== $tier) {
-                // Kalau kecepatannya berubah, kita tutup garis lama, dan bikin garis baru
                 if (!empty($currentSegment)) {
-                    // Masukin kordinat baru ini ke ujung garis lama biar garisnya nggak putus/bolong di map
                     $currentSegment[] = $coord;
                     $features[] = $this->createGeoJsonFeature($currentSegment, $currentTier);
-                    $currentSegment = [$coord]; // Mulai garis baru
+                    $currentSegment = [$coord];
                 } else {
                     $currentSegment = [$coord];
                 }
                 $currentTier = $tier;
             } else {
-                // Kalau kecepatan masih sama, lanjutin gambar garisnya
                 $currentSegment[] = $coord;
             }
         }
 
-        // Masukin segmen terakhir yang tersisa ke array features
         if (count($currentSegment) > 1) {
             $features[] = $this->createGeoJsonFeature($currentSegment, $currentTier);
         }
 
-        // 4. Return Output sesuai Standar Dokumen (FeatureCollection)
         return response()->json([
             'type' => 'FeatureCollection',
             'features' => $features,
-            'meta' => [
-                'distance_km' => round($distanceKm, 2),
-                'duration_min' => $durationMin,
-                'avg_speed' => round((float)$stats->avg_speed, 2),
-                'max_speed' => round((float)$stats->max_speed, 2),
-                'point_count' => $pointCount // Kita tampilin count asli sblm di-downsample
-            ]
+            'meta' => $this->buildMeta($stats, $distanceKm, $durationMin, $vehicle, $vType)
         ]);
     }
 
     /**
-     * Helper function untuk ngebentuk array GeoJSON Feature
+     * Build meta information for sidebar and header.
      */
-    private function createGeoJsonFeature($coordinates, $speedTier)
+    private function buildMeta($stats, float $distance, int $duration, $vehicle, $vType): array
+    {
+        return [
+            'distance_km' => round($distance, 2),
+            'duration_min' => $duration,
+            'avg_speed' => round((float)($stats->avg_speed ?? 0), 2),
+            'max_speed' => round((float)($stats->max_speed ?? 0), 2),
+            'point_count' => $stats->point_count ?? 0,
+            'asset_info' => [
+                'number' => $vehicle->asset_number ?? 'ID: ' . $vehicle->id,
+                'make'   => $vehicle->make ?? 'Unknown',
+                'model'  => $vehicle->model ?? 'Vehicle',
+                'type'   => $vType->name ?? 'Haul Truck'
+            ]
+        ];
+    }
+
+    /**
+     * Create individual GeoJSON Feature.
+     */
+    private function createGeoJsonFeature(array $coordinates, ?string $speedTier): array
     {
         return [
             'type' => 'Feature',
