@@ -10,11 +10,12 @@ use Spatie\QueryBuilder\QueryBuilder;
 use Spatie\QueryBuilder\AllowedFilter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 
 class VehicleController extends Controller
 {
-    public function index()
+    public function index(): AnonymousResourceCollection
     {
         $vehicles = QueryBuilder::for(Vehicle::class)
             ->with(['vehicleType', 'currentOperator', 'gpsProvider'])
@@ -60,7 +61,7 @@ class VehicleController extends Controller
         ], 201);
     }
 
-    public function show($id)
+    public function show(int $id)
     {
         $vehicle = QueryBuilder::for(Vehicle::class)
             ->allowedIncludes(['vehicleType', 'currentOperator', 'gpsProvider', 'activities'])
@@ -72,11 +73,10 @@ class VehicleController extends Controller
         ]);
     }
 
-    public function activities($id)
+    public function activities(int $id)
     {
         $vehicle = Vehicle::findOrFail($id);
 
-        // Ambil log aktivitas dari Spatie
         $activities = $vehicle->activities()
             ->with('causer')
             ->latest()
@@ -88,7 +88,7 @@ class VehicleController extends Controller
         ]);
     }
 
-    public function update(VehicleRequest $request, $id)
+    public function update(VehicleRequest $request, int $id)
     {
         $vehicle = Vehicle::findOrFail($id);
         $vehicle->update($request->validated());
@@ -100,7 +100,7 @@ class VehicleController extends Controller
         ]);
     }
 
-    public function updateStatus(VehicleRequest $request, $id)
+    public function updateStatus(VehicleRequest $request, int $id)
     {
         $vehicle = Vehicle::findOrFail($id);
         $vehicle->update(['status' => $request->status]);
@@ -123,7 +123,6 @@ class VehicleController extends Controller
         }
 
         try {
-            // ambil provider
             $provider = $vehicle->gpsProvider;
 
             if (!$provider) {
@@ -142,12 +141,10 @@ class VehicleController extends Controller
                 ], 400);
             }
 
-            // build URL
             $baseUrl = rtrim($provider->base_url, '/');
             $endpoint = ltrim($provider->location_endpoint ?? '/device-status', '/');
             $url = $baseUrl . '/' . $endpoint;
 
-            // auth config
             $authConfig = $provider->auth_config ?? [];
             $headers = [];
 
@@ -157,13 +154,11 @@ class VehicleController extends Controller
                 $headers[$authConfig['header'] ?? 'X-API-KEY'] = $authConfig['key'] ?? '';
             }
 
-            // request ke provider
             $response = Http::withHeaders($headers)
                 ->get($url, [
                     'devices' => $vehicle->gps_device_id
                 ]);
 
-            // 🔥 DEBUG RESPONSE (sementara)
             if (!$response->successful()) {
                 return response()->json([
                     'result' => -1,
@@ -179,7 +174,6 @@ class VehicleController extends Controller
 
             $data = $response->json();
 
-            // parsing
             $deviceData = $data['results'][0]['data'] ?? null;
 
             if (!$deviceData || $deviceData['result'] !== 0) {
@@ -202,7 +196,6 @@ class VehicleController extends Controller
                 ], 404);
             }
 
-            // ✅ FINAL OUTPUT SESUAI PDF
             return response()->json([
                 'result' => $deviceData['result'],
                 'status' => [
@@ -224,7 +217,7 @@ class VehicleController extends Controller
         }
     }
 
-    public function destroy($id)
+    public function destroy(int $id)
     {
         $vehicle = Vehicle::findOrFail($id);
         $vehicle->delete();

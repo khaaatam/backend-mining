@@ -8,24 +8,20 @@ class VehicleRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true; // Autorisasi di-handle oleh middleware route
+        return true;
     }
 
     public function rules(): array
     {
-        // Ambil ID kendaraan dari route
-        // Handle jika Laravel mengembalikan objek model atau sekadar string ID
         $vehicle = $this->route('vehicle');
         $vehicleId = is_object($vehicle) ? $vehicle->id : $vehicle;
 
-        // Jika endpoint-nya khusus untuk update status (Quick Status Change)
         if ($this->routeIs('vehicles.status')) {
             return [
                 'status' => 'required|string|in:active,idle,maintenance,breakdown,decommissioned'
             ];
         }
 
-        // Rule untuk Create (POST) dan Full Update (PUT/PATCH)
         return [
             'asset_number' => 'required|string|unique:vehicles,asset_number,' . $vehicleId,
             'make' => 'required|string',

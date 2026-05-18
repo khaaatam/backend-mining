@@ -10,7 +10,6 @@ class UserController extends Controller
 {
     public function index()
     {
-        // ambil semua user barengan sama rolenya
         $users = User::with('roles')->get();
         return $this->successResponse($users, 'daftar user berhasil diambil');
     }
@@ -30,7 +29,6 @@ class UserController extends Controller
             'password' => Hash::make($request->password),
         ]);
 
-        // assign role pake spatie
         $user->assignRole($request->role);
 
         return $this->successResponse($user->load('roles'), 'user berhasil dibuat', 201);
@@ -52,7 +50,6 @@ class UserController extends Controller
         $user->update($request->only('name', 'email'));
 
         if ($request->has('role')) {
-            // hapus role lama, ganti yang baru (syncRoles bawaan spatie)
             $user->syncRoles($request->role);
         }
 

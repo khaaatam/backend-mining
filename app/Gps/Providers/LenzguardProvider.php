@@ -33,8 +33,6 @@ class LenzguardProvider extends AbstractGpsProvider
                 'devices' => '111111111'
             ]);
 
-            // Lenzguard nge-return 200 OK walaupun device "111111111" gak ada.
-            // Selama statusnya 2xx, berarti koneksi dan Token valid!
             return $response->successful();
         } catch (\Throwable $e) {
             return false;
@@ -52,7 +50,6 @@ class LenzguardProvider extends AbstractGpsProvider
                 'devices' => $deviceId
             ])->throw()->json();
 
-            // Ambil index ke-0 dari array "results"
             $item = $response['results'][0] ?? [];
 
             return new RawPing(
@@ -75,9 +72,9 @@ class LenzguardProvider extends AbstractGpsProvider
             deviceId: $raw->deviceId,
             latitude: (float) ($status['mlat'] ?? 0),
             longitude: (float) ($status['mlng'] ?? 0),
-            speed: (float) (($status['sp'] ?? 0)), // PDF bilang Sp: Kecepatan / 10 (km/h)
+            speed: (float) ($status['sp'] ?? 0),
             heading: (float) ($status['hx'] ?? 0),
-            altitude: null, // Lenzguard gak ada altitude
+            altitude: null,
             recordedAt: isset($status['gt']) ? Carbon::parse($status['gt']) : $raw->fetchedAt,
             rawPayload: $p,
         );

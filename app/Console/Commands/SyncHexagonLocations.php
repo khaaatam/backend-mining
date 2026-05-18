@@ -33,7 +33,6 @@ class SyncHexagonLocations extends Command
     {
         $this->info('Starting Hexagon GPS synchronization process...');
 
-        // Retrieve the Hexagon GPS provider from the database
         $providerDb = GpsProvider::where('name', 'Hexagon Mining')->first();
         if (!$providerDb) {
             $this->error('Hexagon GPS provider not found in the database. Aborting sync.');
@@ -48,7 +47,6 @@ class SyncHexagonLocations extends Command
             $username = env('HEXAGON_API_USERNAME');
             $password = env('HEXAGON_API_PASSWORD');
 
-            // Execute HTTP GET request with Basic Auth and a 10-second timeout
             $response = Http::timeout(10)->withBasicAuth($username, $password)->get($url);;
 
             if ($response->failed()) {
@@ -71,35 +69,29 @@ class SyncHexagonLocations extends Command
             $syncedCount = 0;
 
             foreach ($travelingData as $data) {
-                // Validate required payload attributes
                 if (!isset($data['equipment_id'], $data['latitude'], $data['longitude'])) {
                     continue;
                 }
 
-                // Parse and normalize spatial and telemetry data
                 $equipmentId = $data['equipment_id'];
                 $lat = $data['latitude'] / 3600000;
                 $lng = $data['longitude'] / 3600000;
                 $speed = $data['velocity'] ?? 0;
                 $heading = $data['heading'] ?? 0;
 
-                // Parse timestamp, fallback to current time if unavailable
                 $timestamp = isset($data['updated_at']) ? Carbon::parse($data['updated_at']) : now();
 
                 // TODO: Remove this override once the staging database partition issue for historical dates is resolved.
                 $timestamp = now();
 
-                // Look up the registered vehicle mapped to this Hexagon equipment ID
                 $vehicle = Vehicle::where('equipment_id', (string)$equipmentId)
                     ->where('gps_provider_id', $providerDb->id)
                     ->first();
 
                 if (!$vehicle) {
-                    // Vehicle is not registered or not assigned to this provider; skip processing.
                     continue;
                 }
 
-                // Update vehicle location using PostGIS spatial functions via Query Builder
                 DB::table('vehicles')->where('id', $vehicle->id)->update([
                     'last_known_location' => DB::raw("ST_SetSRID(ST_MakePoint({$lng}, {$lat}), 4326)"),
                     'speed' => $speed,

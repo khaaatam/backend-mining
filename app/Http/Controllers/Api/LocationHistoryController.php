@@ -27,11 +27,9 @@ class LocationHistoryController extends Controller
         $from = Carbon::parse($request->from);
         $to = Carbon::parse($request->to);
 
-        // 2. Tarik Data Vehicle & Tipe Secara Manual (Anti-Relationship Error)
         $vehicle = Vehicle::find($vehicleId);
         $vType = DB::table('vehicle_types')->find($vehicle->vehicle_type_id);
 
-        // 3. Ambil Statistik Perjalanan (recorded_at)
         $stats = DB::table('gps_pings')
             ->where('vehicle_id', $vehicleId)
             ->whereBetween('recorded_at', [$from, $to])
@@ -44,7 +42,6 @@ class LocationHistoryController extends Controller
             ')
             ->first();
 
-        // Kalau Zonk, kirim meta kosong tapi info kendaraan tetep ada
         if (!$stats || $stats->point_count == 2) {
             return response()->json([
                 'type' => 'FeatureCollection',
@@ -53,17 +50,15 @@ class LocationHistoryController extends Controller
             ]);
         }
 
-        // 4. Hitung Jarak pake PostGIS (kolom: coordinates)
         $distanceQuery = DB::table('gps_pings')
             ->where('vehicle_id', $vehicleId)
             ->whereBetween('recorded_at', [$from, $to])
             ->selectRaw('ST_Length(ST_MakeLine(coordinates::geometry ORDER BY recorded_at)::geography) / 1000 as distance_km')
             ->first();
 
-        $distanceKm = $distanceQuery ? (float) $distanceQuery->distance_km : 0; 
+        $distanceKm = $distanceQuery ? (float) $distanceQuery->distance_km : 0;
         $durationMin = Carbon::parse($stats->start_time)->diffInMinutes(Carbon::parse($stats->end_time));
 
-        // 5. Tarik Pings buat Gambar Rute
         $pings = DB::table('gps_pings')
             ->where('vehicle_id', $vehicleId)
             ->whereBetween('recorded_at', [$from, $to])
@@ -71,7 +66,6 @@ class LocationHistoryController extends Controller
             ->select('latitude', 'longitude', 'speed')
             ->get();
 
-        // 6. Segmentasi Warna Kecepatan (4 Tier)
         $features = [];
         $currentSegment = [];
         $currentTier = null;

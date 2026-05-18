@@ -15,7 +15,6 @@ class GpsProviderResource extends JsonResource
             'driver' => $this->driver,
             'base_url' => $this->base_url,
             'is_active' => $this->is_active,
-            // Munculkan jumlah kendaraan jika ada (withCount)
             'vehicles_count' => $this->whenCounted('vehicles'),
         ];
     }

@@ -27,7 +27,6 @@ class CreateGpsPartitionCommand extends Command
         $start = $target->toDateString();
         $end   = $target->copy()->addMonth()->startOfMonth()->toDateString();
 
-        // Check if partition already exists
         $exists = DB::selectOne("
             SELECT 1 FROM pg_tables WHERE tablename = ?
         ", [$name]);

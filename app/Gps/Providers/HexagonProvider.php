@@ -15,8 +15,6 @@ class HexagonProvider extends AbstractGpsProvider
     public function fetchLatest(string $deviceId): RawPing
     {
         try {
-            // Sesuai catatan: Hexagon butuh ID di query params
-            // Kita gunakan $this->client yang sudah membawa Base URL dan Auth dari Abstract
             $response = $this->client
                 ->get("/Traveling", [
                     'id' => $deviceId
@@ -24,8 +22,6 @@ class HexagonProvider extends AbstractGpsProvider
                 ->throw()
                 ->json();
 
-            // Sesuai requirement: data biasanya ada di array atau langsung object
-            // Kita ambil elemen pertama jika response-nya berupa list
             $data = isset($response[0]) ? $response[0] : $response;
 
             return new RawPing(
@@ -57,7 +53,7 @@ class HexagonProvider extends AbstractGpsProvider
             // Mapping field sesuai requirement Hexagon
             speed: (float) ($p['velocity'] ?? 0),
             heading: (float) ($p['heading'] ?? 0),
-            altitude: null, // Hexagon tidak menyediakan altitude [cite: 2775]
+            altitude: null, // Hexagon tidak menyediakan data altitude
             recordedAt: $raw->fetchedAt,
             rawPayload: $p,
         );
@@ -69,7 +65,6 @@ class HexagonProvider extends AbstractGpsProvider
     public function testConnection(): bool
     {
         try {
-            // Tembak endpoint Traveling sesuai dokumen task [cite: 1391]
             $response = $this->client->get('/Traveling', ['limit' => 1]);
             return $response->successful();
         } catch (\Throwable $e) {

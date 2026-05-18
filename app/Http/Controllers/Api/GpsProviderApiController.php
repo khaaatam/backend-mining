@@ -8,29 +8,26 @@ use Illuminate\Http\Request;
 
 class GpsProviderApiController extends Controller
 {
-    // Ambil semua daftar provider buat ditampilin di tabel Vue
     public function index()
     {
         $providers = \App\Models\GpsProvider::withCount('vehicles')->get();
         return response()->json($providers);
     }
 
-    // Ambil detail data buat diisi ke form edit di Vue
     public function show(GpsProvider $gpsProvider)
     {
         return response()->json($gpsProvider);
     }
 
-    // Simpan provider baru (Inputan dari Modal Form di Vue nanti)
     public function store(Request $request)
     {
         $validated = $request->validate([
             'name' => 'required|string',
-            'driver' => 'required|string', // Contoh: 'hexagon'
+            'driver' => 'required|string',
             'base_url' => 'required|url',
-            'auth_type' => 'required|string', // api_key, bearer, basic
-            'auth_config' => 'required|array', // JSON config
-            'location_endpoint' => 'nullable|string', // Isi: '/Traveling'
+            'auth_type' => 'required|string',
+            'auth_config' => 'required|array',
+            'location_endpoint' => 'nullable|string',
             'poll_interval' => 'integer|min:10',
             'is_active' => 'boolean'
         ]);
@@ -39,7 +36,6 @@ class GpsProviderApiController extends Controller
         return response()->json($provider, 201);
     }
 
-    // Simpan perubahan data
     public function update(Request $request, GpsProvider $gpsProvider)
     {
         $validated = $request->validate([
@@ -57,10 +53,8 @@ class GpsProviderApiController extends Controller
         return response()->json($gpsProvider);
     }
 
-    // Hapus provider
     public function destroy(GpsProvider $gpsProvider)
     {
-        // Opsional: Cek dulu kalau masih ada kendaraan yang nempel
         if ($gpsProvider->vehicles()->count() > 0) {
             return response()->json([
                 'message' => 'Gagal hapus! Masih ada kendaraan yang terhubung ke provider ini.'
@@ -71,7 +65,6 @@ class GpsProviderApiController extends Controller
         return response()->json(['message' => 'Provider berhasil dihapus']);
     }
 
-    // Buat dropdown di halaman assignment kendaraan
     public function list()
     {
         return response()->json(

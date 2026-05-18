@@ -31,9 +31,6 @@ class SyncVeridaptLocations extends Command
             return;
         }
 
-        // ==========================================
-        // 1. SYNC FUEL STATIONS (TANGKI STATIS)
-        // ==========================================
         $this->info('Syncing fuel station coordinates...');
         $stations = $service->getFuelStationCoordinates($siteId);
 
@@ -48,15 +45,10 @@ class SyncVeridaptLocations extends Command
         }
         $this->info(count($stations) . ' fuel stations synced.');
 
-        // ==========================================
-        // 2. SYNC FUEL TRUCKS 
-        // ==========================================
         $this->info('Syncing fuel truck positions...');
 
-        // STEP 1: Tarik data transaksi 24 jam terakhir buat nge-resolve Tank Code
         $recentTransactions = $service->getLatestFuelTruckTransactions($siteId, now()->subDay()->toIso8601String());
 
-        // Bikin mapping: target_equipment (Truck) => source (Tank)
         $truckTankMapping = [];
         foreach ($recentTransactions as $tx) {
             if (!isset($truckTankMapping[$tx['target_equipment']])) {
@@ -64,7 +56,6 @@ class SyncVeridaptLocations extends Command
             }
         }
 
-        // STEP 2: Tarik data posisi truk dan update ke database
         $trucks = $service->getFuelTruckLastPosition($siteId);
 
         foreach ($trucks as $truck) {
@@ -75,15 +66,14 @@ class SyncVeridaptLocations extends Command
                 continue;
             }
 
-            // Ambil kode tangki dari hasil mapping transaksi tadi
             $tankCode = $truckTankMapping[$equipmentId] ?? null;
 
             Vehicle::where('asset_number', $equipmentId)
                 ->where('gps_provider_id', $truckProvId)
                 ->update([
-                    'veridapt_site_id' => $siteId,                 // Kolom baru
-                    'veridapt_tank_code' => $tankCode,             // Kolom baru hasil resolve
-                    'veridapt_tank_synced_at' => now(),            // Kolom baru timestamp
+                    'veridapt_site_id' => $siteId,
+                    'veridapt_tank_code' => $tankCode,
+                    'veridapt_tank_synced_at' => now(),
                     'last_known_location' => DB::raw("ST_GeomFromText('POINT({$truck['longitude']} {$truck['latitude']})', 4326)"),
                     'last_seen_at' => now(),
                 ]);

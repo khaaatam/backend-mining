@@ -22,7 +22,6 @@ class AuthController extends Controller
             ], 401);
         }
 
-        // Muat relasi roles agar terbaca oleh frontend Vue Pinia
         $user->load('roles');
 
         $token = $user->createToken('auth_token')->plainTextToken;
