@@ -7,6 +7,9 @@ use App\Http\Controllers\Api\VehicleTypeController;
 use App\Http\Controllers\Api\VehicleController;
 use App\Http\Controllers\Api\GpsProviderApiController;
 use App\Http\Controllers\Api\MapController;
+use App\Http\Controllers\Api\LocationHistoryController;
+
+Route::get('/history', [LocationHistoryController::class, 'index']);
 
 Route::post('/login', [AuthController::class, 'login']);
 
